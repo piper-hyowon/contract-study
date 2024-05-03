@@ -1,0 +1,32 @@
+{
+  "name": "duzzle-contract",
+  "version": "1.0.0",
+  "description": "duzzle contract",
+  "main": "index.js",
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
+    "@types/chai": "^4.2.21",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^16.6.0",
+    "chai": "^4.3.4",
+    "ts-node": "^10.2.0",
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-waffle": "^2.0.6",
+    "@openzeppelin/contracts": "^4.8.1",
+    "@typechain/ethers-v5": "^7.0.1",
+    "@typechain/hardhat": "^2.3.0",
+    "alchemy-sdk": "^3.1.2",
+    "dotenv": "^10.0.0",
+    "ethers": "^5.0.0",
+    "hardhat": "^2.22.1",
+    "hardhat-deploy": "^0.11.45",
+    "moment": "^2.30.1"
+  }
+}
