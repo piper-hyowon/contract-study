@@ -1,33 +1,21 @@
-import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
-import "dotenv/config";
-import "hardhat-deploy";
-import "./hardhat-type-extensions";
-
-import { extendEnvironment, HardhatUserConfig, task } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
 import { getConfig } from "./config";
-
-import {
-  transaction,
-} from "./scripts/transaction";
-import { utils } from "ethers";
+import { extendEnvironment, HardhatUserConfig } from "hardhat/config";
+import "dotenv/config";
+import "./hardhat-type-extensions";
+import "@nomicfoundation/hardhat-ethers";
 
 extendEnvironment((hre) => {
   hre.configByNetwork = getConfig(hre.network.name);
 });
 
-task("transaction", "").setAction(async (args, hre, runSuper) => {
-  await transaction(hre);
-});
-
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.2",
+    version: "0.8.24",
     settings: {
+      evmVersion: "shanghai",
       optimizer: {
         enabled: true,
-        runs: 1000,
       },
     },
   },
