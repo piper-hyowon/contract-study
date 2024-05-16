@@ -19,14 +19,8 @@ contract PlayDuzzle is AccessControl {
     uint8[] public seasonIds; // 지금까지의 시즌 id array
     mapping(uint8 => DuzzleLibrary.Season) public seasons; // 시즌별 정보
     Dal public dalToken;
-    address public dalTokenAddress;
-
     BlueprintItem public blueprintItemToken;
-    address public blueprintItemTokenAddress;
-
     PuzzlePiece puzzlePieceToken;
-    address public puzzlePieceTokenAddress;
-
     uint public offset;
 
     event StartSeason(address[] itemAddresses);
@@ -38,21 +32,13 @@ contract PlayDuzzle is AccessControl {
     );
     event UnlockPuzzlePiece(uint8 zoneId, uint tokenId, address to);
 
-    constructor(
-        uint capOfDalToken,
-        string memory bluePrintBaseUri,
-        string memory puzzlePieceBaseUri
-    ) {
+    constructor(address dal, address blueprint, address puzzlepiece) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         thisSeasonId = 0;
-        dalToken = new Dal(capOfDalToken, address(this), msg.sender);
-        dalTokenAddress = address(dalToken);
 
-        blueprintItemToken = new BlueprintItem(bluePrintBaseUri, address(this));
-        blueprintItemTokenAddress = address(blueprintItemToken);
-
-        puzzlePieceToken = new PuzzlePiece(puzzlePieceBaseUri, address(this));
-        puzzlePieceTokenAddress = address(puzzlePieceToken);
+        dalToken = Dal(dal);
+        blueprintItemToken = BlueprintItem(blueprint);
+        puzzlePieceToken = PuzzlePiece(puzzlepiece);
 
         offset = 0; // start
     }
@@ -81,18 +67,18 @@ contract PlayDuzzle is AccessControl {
 
         uint256 materialItemCount = existedItemCollections.length +
             newItemNames.length;
-        address[] memory materialItems = new address[](materialItemCount);
-        MaterialItem[] memory materialItemTokens = new MaterialItem[](
-            materialItemCount
-        );
+        // address[] memory materialItems = new address[](materialItemCount);
+        // MaterialItem[] memory materialItemTokens = new MaterialItem[](
+        //     materialItemCount
+        // );
         for (uint256 i = 0; i < materialItemCount; i++) {
             if (
                 existedItemCollections.length > 0 &&
                 i < existedItemCollections.length
             ) {
                 MaterialItem instance = MaterialItem(existedItemCollections[i]);
-                materialItems[i] = address(instance); // address
-                materialItemTokens[i] = instance; // contract instance
+                // materialItems[i] = address(instance); // address
+                seasons[thisSeasonId].materialItemTokens[i] = instance; // contract instance
             } else {
                 uint256 j = i - existedItemCollections.length;
                 MaterialItem instance = new MaterialItem(
@@ -101,19 +87,21 @@ contract PlayDuzzle is AccessControl {
                     newItemBaseUris[i],
                     address(this)
                 );
-                materialItems[i] = address(instance);
-                materialItemTokens[i] = instance;
+                // materialItems[i] = address(instance);
+                seasons[thisSeasonId].materialItemTokens[i] = instance;
             }
-            seasons[thisSeasonId].itemMaxSupplys[materialItems[i]] = maxSupplys[
-                i
-            ];
+            seasons[thisSeasonId].itemMaxSupplys[
+                address(seasons[thisSeasonId].materialItemTokens[i])
+            ] = maxSupplys[i];
 
-            seasons[thisSeasonId].itemMinted[materialItems[i]] = 0;
+            seasons[thisSeasonId].itemMinted[
+                address(seasons[thisSeasonId].materialItemTokens[i])
+            ] = 0;
         }
 
-        seasons[thisSeasonId].materialItemTokens = materialItemTokens;
+        // seasons[thisSeasonId].materialItemTokens = materialItemTokens;
 
-        emit StartSeason(materialItems);
+        // emit StartSeason(materialItems);
     }
 
     // zone 개수만큼 호출 필요(20번)
