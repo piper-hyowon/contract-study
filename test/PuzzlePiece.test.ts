@@ -9,7 +9,7 @@ describe("PuzzlePiece", function () {
   let puzzlePieceInstance: PuzzlePiece;
   let owner: HardhatEthersSigner;
   let addr1: HardhatEthersSigner;
-  const tokenCollectionName: string = "Duzzle Puzzle Piecee NFT";
+  const tokenCollectionName: string = "Duzzle Puzzle Pieces";
   const tokenCollectionSymbol: string = "DZPZ";
   const tokenCollectionBaseUri: string = "baseUrihaha";
 
@@ -17,8 +17,6 @@ describe("PuzzlePiece", function () {
     [owner, addr1] = await ethers.getSigners();
     const dalContract = await ethers.getContractFactory("PuzzlePiece");
     puzzlePieceInstance = (await dalContract.deploy(
-      tokenCollectionName,
-      tokenCollectionSymbol,
       tokenCollectionBaseUri,
       owner.address
     )) as unknown as PuzzlePiece;
@@ -50,12 +48,12 @@ describe("PuzzlePiece", function () {
     it("Is able to query the NFT balances of an address", async function () {
       const [, tokenId1] = (
         (
-          await (await puzzlePieceInstance.mint(owner, "puzzle/0")).wait()
+          await (await puzzlePieceInstance.mint(owner, BigInt(0))).wait()
         )?.logs.find((e) => e.topics[0] === EventTopic.Mint) as EventLog
       ).args;
       const [, tokenId2] = (
         (
-          await (await puzzlePieceInstance.mint(owner, "puzzle/1")).wait()
+          await (await puzzlePieceInstance.mint(owner, BigInt(1))).wait()
         )?.logs.find((e) => e.topics[0] === EventTopic.Mint) as EventLog
       ).args;
 
@@ -65,7 +63,7 @@ describe("PuzzlePiece", function () {
 
       const [, tokenId3] = (
         (
-          await (await puzzlePieceInstance.mint(addr1, "puzzle/1")).wait()
+          await (await puzzlePieceInstance.mint(addr1.address, BigInt(2))).wait()
         )?.logs.find((e) => e.topics[0] === EventTopic.Mint) as EventLog
       ).args;
       expect(await puzzlePieceInstance.ownerOf(tokenId3)).to.equal(addr1);
@@ -75,12 +73,13 @@ describe("PuzzlePiece", function () {
       // 퍼즐 조각 NFT를 유저가 Mint할 수 있지만 이 컨트랙트의 mint 메서드는 minter 만 호출 가능한 이유
       // : 유저는 PuzzlePiece Contract 가 아닌 'PlayDuzzle Contract" 를 호출해서 민트해야한다.
       // PuzzlePiece 에서 직접적으로 Mint 하는건 PlayDuzzle Contract(minter)임
-      await expect(puzzlePieceInstance.connect(addr1).mint(addr1.address, ""))
-        .to.be.reverted;
+      await expect(
+        puzzlePieceInstance.connect(addr1).mint(addr1.address, BigInt(0))
+      ).to.be.reverted;
     });
 
     it("Emits a transfer event for newly minted NFTs", async function () {
-      await expect(puzzlePieceInstance.mint(addr1.address, "puzzle/0"))
+      await expect(puzzlePieceInstance.mint(addr1.address, 0))
         .to.emit(puzzlePieceInstance, "Transfer")
         .withArgs(
           "0x0000000000000000000000000000000000000000",
@@ -90,7 +89,7 @@ describe("PuzzlePiece", function () {
 
       const txResponse = await puzzlePieceInstance.mint(
         addr1.address,
-        "puzzle/1"
+        BigInt(1)
       );
       const txReceipt = await txResponse.wait();
       const transferEvent = txReceipt?.logs.find(
@@ -101,13 +100,13 @@ describe("PuzzlePiece", function () {
     });
 
     it("Emits a mint event for newly minted NFTs", async function () {
-      await expect(puzzlePieceInstance.mint(addr1.address, "puzzle/0"))
+      await expect(puzzlePieceInstance.mint(addr1.address, BigInt(0)))
         .to.emit(puzzlePieceInstance, "Mint")
         .withArgs(addr1.address, 0);
 
       const txResponse = await puzzlePieceInstance.mint(
         addr1.address,
-        "puzzle/1"
+        BigInt(1)
       );
       const txReceipt = await txResponse.wait();
       const transferEvent = txReceipt?.logs.find(
@@ -120,7 +119,7 @@ describe("PuzzlePiece", function () {
 
   describe("Transfer", function () {
     it("Is able to transfer NFTs to another wallet when called by owner", async function () {
-      await puzzlePieceInstance.mint(owner, "");
+      await puzzlePieceInstance.mint(owner, BigInt(0));
       await puzzlePieceInstance["safeTransferFrom(address,address,uint256)"](
         owner.address,
         addr1.address,
@@ -130,7 +129,7 @@ describe("PuzzlePiece", function () {
     });
 
     it("Emits a Transfer event when transferring a NFT", async function () {
-      await puzzlePieceInstance.mint(owner, "");
+      await puzzlePieceInstance.mint(owner, BigInt(0));
       await expect(
         puzzlePieceInstance["safeTransferFrom(address,address,uint256)"](
           owner.address,
@@ -161,7 +160,9 @@ describe("PuzzlePiece", function () {
     it("Is able to burn NFTs", async function () {
       const [to, mintedTokenId] = (
         (
-          await (await puzzlePieceInstance.mint(addr1.address, "")).wait()
+          await (
+            await puzzlePieceInstance.mint(addr1.address, BigInt(0))
+          ).wait()
         )?.logs.find((e) => e.topics[0] === EventTopic.Mint) as EventLog
       ).args;
       const balance = await puzzlePieceInstance.balanceOf(addr1.address);
@@ -183,7 +184,9 @@ describe("PuzzlePiece", function () {
     it("Emits a Burn event when burning a NFT", async function () {
       const [to, mintedTokenId] = (
         (
-          await (await puzzlePieceInstance.mint(addr1.address, "")).wait()
+          await (
+            await puzzlePieceInstance.mint(addr1.address, BigInt(3))
+          ).wait()
         )?.logs.find((e: Log) => e.topics[0] === EventTopic.Mint) as EventLog
       ).args;
 

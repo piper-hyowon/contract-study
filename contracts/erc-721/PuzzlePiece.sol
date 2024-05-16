@@ -4,11 +4,9 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "hardhat/console.sol";
 
 contract PuzzlePiece is AccessControl, ERC721, ERC721URIStorage {
-    string baseURI;
-    uint private nextTokenId;
+    string private baseURI;
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER");
 
@@ -16,11 +14,9 @@ contract PuzzlePiece is AccessControl, ERC721, ERC721URIStorage {
     event Burn(address from, uint tokenId);
 
     constructor(
-        string memory name_,
-        string memory symbol_,
         string memory baseURI_,
         address minter
-    ) ERC721(name_, symbol_) {
+    ) ERC721("Duzzle Puzzle Pieces", "DZPZ") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, minter);
 
@@ -39,12 +35,11 @@ contract PuzzlePiece is AccessControl, ERC721, ERC721URIStorage {
 
     function mint(
         address _to,
-        string memory _tokenURI
+        // string memory _tokenURI,
+        uint tokenId
     ) external onlyRole(MINTER_ROLE) returns (uint) {
-        uint tokenId = nextTokenId;
         _mint(_to, tokenId);
-        _setTokenURI(tokenId, _tokenURI);
-        nextTokenId++;
+        // _setTokenURI(tokenId, _tokenURI);
 
         emit Mint(_to, tokenId);
 
