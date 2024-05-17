@@ -16,20 +16,15 @@ using Utils for uint256;
 
 contract PlayDuzzle is AccessControl {
     uint8 public thisSeasonId; // 현재 시즌 id
-    uint8[] public seasonIds; // 지금까지의 시즌 id array
+    uint8[] private seasonIds; // 지금까지의 시즌 id array
     mapping(uint8 => DuzzleLibrary.Season) public seasons; // 시즌별 정보
     Dal public dalToken;
-    address public dalTokenAddress;
-
     BlueprintItem public blueprintItemToken;
-    address public blueprintItemTokenAddress;
-
     PuzzlePiece puzzlePieceToken;
-    address public puzzlePieceTokenAddress;
 
     uint public offset;
 
-    event StartSeason(address[] itemAddresses);
+    event StartSeason(MaterialItem[] itemAddresses);
     event SetZoneData(
         uint8 zoneId,
         uint8 pieceCountOfZones,
@@ -46,22 +41,25 @@ contract PlayDuzzle is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         thisSeasonId = 0;
         dalToken = new Dal(capOfDalToken, address(this), msg.sender);
-        dalTokenAddress = address(dalToken);
-
-        blueprintItemToken = new BlueprintItem(bluePrintBaseUri, address(this));
-        blueprintItemTokenAddress = address(blueprintItemToken);
-
-        puzzlePieceToken = new PuzzlePiece(puzzlePieceBaseUri, address(this));
-        puzzlePieceTokenAddress = address(puzzlePieceToken);
+        blueprintItemToken = new BlueprintItem(
+            bluePrintBaseUri,
+            address(this),
+            msg.sender
+        );
+        puzzlePieceToken = new PuzzlePiece(
+            puzzlePieceBaseUri,
+            address(this),
+            msg.sender
+        );
 
         offset = 0; // start
     }
 
     function startSeason(
-        address[] calldata existedItemCollections, // 기존 재료아이템 (토큰 주소)
+        address[] memory existedItemCollections, // 기존 재료아이템 (토큰 주소)
         string[] calldata newItemNames, // 새로운 재료 아이템 이름
-        string[] calldata newItemSymbols, // 새로운 재료 아이템 심볼
-        string[] calldata newItemBaseUris,
+        string[] memory newItemSymbols, // 새로운 재료 아이템 심볼
+        string[] memory newItemBaseUris,
         uint16[] calldata maxSupplys, //  재료 아이템 발행 제한 개수
         uint24 _totalPieceCount // 총 퍼즐피스 수
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -81,39 +79,41 @@ contract PlayDuzzle is AccessControl {
 
         uint256 materialItemCount = existedItemCollections.length +
             newItemNames.length;
-        address[] memory materialItems = new address[](materialItemCount);
         MaterialItem[] memory materialItemTokens = new MaterialItem[](
             materialItemCount
         );
+        uint256 j = 0;
         for (uint256 i = 0; i < materialItemCount; i++) {
             if (
                 existedItemCollections.length > 0 &&
                 i < existedItemCollections.length
             ) {
                 MaterialItem instance = MaterialItem(existedItemCollections[i]);
-                materialItems[i] = address(instance); // address
                 materialItemTokens[i] = instance; // contract instance
             } else {
-                uint256 j = i - existedItemCollections.length;
+                j = i - existedItemCollections.length;
                 MaterialItem instance = new MaterialItem(
                     newItemNames[j],
                     newItemSymbols[j],
-                    newItemBaseUris[i],
-                    address(this)
+                    newItemBaseUris[j],
+                    address(this),
+                    msg.sender
                 );
-                materialItems[i] = address(instance);
+
                 materialItemTokens[i] = instance;
             }
-            seasons[thisSeasonId].itemMaxSupplys[materialItems[i]] = maxSupplys[
-                i
-            ];
+            seasons[thisSeasonId].itemMaxSupplys[
+                address(materialItemTokens[i])
+            ] = maxSupplys[i];
 
-            seasons[thisSeasonId].itemMinted[materialItems[i]] = 0;
+            seasons[thisSeasonId].itemMinted[
+                address(materialItemTokens[i])
+            ] = 0;
         }
 
         seasons[thisSeasonId].materialItemTokens = materialItemTokens;
 
-        emit StartSeason(materialItems);
+        emit StartSeason(materialItemTokens);
     }
 
     // zone 개수만큼 호출 필요(20번)
@@ -146,18 +146,101 @@ contract PlayDuzzle is AccessControl {
     }
 
     function getRandomItem() public {
-        // 각 아이템별 total supply 다 되면.. 안된다.! // TODO: 밑에서 어떤 아이템줄건지 확정디ㅗㄴ다음에. 발행 제한 확인해보고..
-        // total supply 는 playduzzle 이 가지고 이씀..
-        // 컨트랙트에 있는 .. 아니 material item 에 enurable 왜 했드라
-
         // 2 DAL 차감
-        require(dalToken.balanceOf(msg.sender) >= 2, "not enough balacnce");
         dalToken.burn(msg.sender, 2);
 
         // 랜덤 아이템 뽑기
-        // max supply 고려해서 ..
-
         // 1. 설계도면 vs 재료
+        uint256 materialItemCount = seasons[thisSeasonId]
+            .materialItemTokens
+            .length;
+        // 총 경우의 수 = n+1 (설계도면 1 + 재료아이템 materialItemCount(n))
+        // 0 ~ (n-1) 중 0 인 경우에만 설계도면 (1/n 확률)
+        bool isMaterial = Utils.getRandomNumber(0, materialItemCount + 1) > 0;
+
+        if (isMaterial) {
+            // 재료 당첨
+            // 재료 있는지 확인 후 mint
+            uint8[] memory availableMaterialItemIdxs = getMintableMaterialIds();
+            if (availableMaterialItemIdxs.length > 0) {
+                uint256 availableMaterialIndex = Utils.getRandomNumber(
+                    0,
+                    availableMaterialItemIdxs.length
+                );
+                MaterialItem instance = seasons[thisSeasonId]
+                    .materialItemTokens[
+                        availableMaterialItemIdxs[availableMaterialIndex]
+                    ];
+                instance.mint(msg.sender);
+                seasons[thisSeasonId].itemMinted[address(instance)] =
+                    seasons[thisSeasonId].itemMinted[address(instance)] +
+                    1;
+            } else {
+                // 발행 가능한 재료 아이템 없을 경우 설계도면 발행
+                uint24[]
+                    memory remainedBlueprintIndexes = getMintableBlueprintIds();
+                if (remainedBlueprintIndexes.length < 1) {
+                    // 설계도면도 없을 경우
+                    revert("item nft sold out");
+                } else {
+                    uint256 bluePrintItemIndex = Utils.getRandomNumber(
+                        0,
+                        remainedBlueprintIndexes.length
+                    );
+                    uint256 blueprintTokenId = remainedBlueprintIndexes[
+                        bluePrintItemIndex
+                    ];
+                    seasons[thisSeasonId].mintedBlueprint[
+                        blueprintTokenId
+                    ] = true;
+                    blueprintItemToken.mint(
+                        msg.sender,
+                        blueprintTokenId + offset
+                    );
+                }
+            }
+        } else {
+            // 설계도면 당첨
+            // 설계도면 있는지 확인 후 mint
+            uint24[]
+                memory remainedBlueprintIndexes = getMintableBlueprintIds();
+            if (remainedBlueprintIndexes.length > 0) {
+                uint256 bluePrintItemIndex = Utils.getRandomNumber(
+                    0,
+                    remainedBlueprintIndexes.length
+                );
+                uint256 blueprintTokenId = remainedBlueprintIndexes[
+                    bluePrintItemIndex
+                ];
+                seasons[thisSeasonId].mintedBlueprint[blueprintTokenId] = true;
+                blueprintItemToken.mint(msg.sender, blueprintTokenId + offset);
+            } else {
+                // 발행 가능한 설계도면 아이템 없을 경우 재료 발행
+                uint8[]
+                    memory availableMaterialItemIdxs = getMintableMaterialIds();
+                if (availableMaterialItemIdxs.length > 0) {
+                    uint256 availableMaterialIndex = Utils.getRandomNumber(
+                        0,
+                        availableMaterialItemIdxs.length
+                    );
+                    MaterialItem instance = seasons[thisSeasonId]
+                        .materialItemTokens[
+                            availableMaterialItemIdxs[availableMaterialIndex]
+                        ];
+                    instance.mint(msg.sender);
+                    seasons[thisSeasonId].itemMinted[address(instance)] =
+                        seasons[thisSeasonId].itemMinted[address(instance)] +
+                        1;
+                } else {
+                    // 재료도 없을 경우
+                    revert("item nft sold out");
+                }
+            }
+        }
+    }
+
+    // 재료 아이템 토큰 maxSupply 고려
+    function getMintableMaterialIds() internal view returns (uint8[] memory) {
         uint256 materialItemCount = seasons[thisSeasonId]
             .materialItemTokens
             .length;
@@ -165,6 +248,7 @@ contract PlayDuzzle is AccessControl {
             materialItemCount
         );
         uint availableMaterialCount = 0;
+
         for (
             uint8 i = 0;
             i < seasons[thisSeasonId].materialItemTokens.length;
@@ -179,74 +263,28 @@ contract PlayDuzzle is AccessControl {
                     address(seasons[thisSeasonId].materialItemTokens[i])
                 ]
             ) {
-                availableMaterialItemIdxs[i] = i;
+                availableMaterialItemIdxs[availableMaterialCount] = i;
                 availableMaterialCount++;
             }
         }
 
-        // 총 경우의 수 n+1 = 설계도면 1 + 이용가능한 재료아이템 materialItemCount(n)
-        // 0 ~ (n-1) 중 0 인 경우에만 설계도면
-        bool isMaterial = Utils.getRandomNumber(0, availableMaterialCount + 1) >
-            0;
-        // isMaterial 인데 material 이 아예 없을 경우 isMaterial 그냥 false로!
-        // 반대로 blueprint 나왔는데  blueprint 없지만 앞에 avaiableMaterialCount 있으면...material 로 바꿔줘.
-        // blueprint 뽑으러 왔는데. blueprint 없고. 앞에 availableMaterialCount 이것도 0이면 재료다뽑았다 revert.
+        return availableMaterialItemIdxs;
+    }
 
+    function getMintableBlueprintIds() internal view returns (uint24[] memory) {
         uint24 totalPieceCount = seasons[thisSeasonId].totalPieceCount;
-        uint24[] memory remainedBlueprintIndexes = new uint24[](
+        uint24[] memory _remainedBlueprintIndexes = new uint24[](
             totalPieceCount
         );
         uint24 mintedBlueprintCount = 0;
-
-        if (isMaterial && availableMaterialCount == 0) {
-            isMaterial = false;
-        } else if (!isMaterial) {
-            for (uint24 i = 0; i < totalPieceCount; i++) {
-                if (!seasons[thisSeasonId].mintedBlueprint[i]) {
-                    remainedBlueprintIndexes[mintedBlueprintCount] = i;
-                    mintedBlueprintCount++;
-                }
-            }
-
-            // 설계도면이 전부 발행되었을 경우
-            if (mintedBlueprintCount < 1) {
-                if (availableMaterialCount > 0) {
-                    isMaterial = true;
-                } else {
-                    revert("item nft sold out");
-                }
+        for (uint24 i = 0; i < totalPieceCount; i++) {
+            if (!seasons[thisSeasonId].mintedBlueprint[i]) {
+                _remainedBlueprintIndexes[mintedBlueprintCount] = i;
+                mintedBlueprintCount++;
             }
         }
 
-        if (isMaterial) {
-            // 재료
-            uint256 availableMaterialIndex = Utils.getRandomNumber(
-                0,
-                availableMaterialCount
-            );
-
-            MaterialItem instance = seasons[thisSeasonId].materialItemTokens[
-                availableMaterialItemIdxs[availableMaterialIndex]
-            ];
-            instance.mint(msg.sender);
-            seasons[thisSeasonId].itemMinted[address(instance)] =
-                seasons[thisSeasonId].itemMinted[address(instance)] +
-                1;
-        } else {
-            // 설계도면
-
-            uint256 bluePrintItemIndex = Utils.getRandomNumber(
-                0,
-                mintedBlueprintCount
-            );
-            uint256 blueprintTokenId = remainedBlueprintIndexes[
-                bluePrintItemIndex
-            ];
-            seasons[thisSeasonId].mintedBlueprint[blueprintTokenId] = true;
-            // console.log("random blueprint idx: ", blueprintTokenId);
-
-            blueprintItemToken.mint(msg.sender, blueprintTokenId + offset);
-        }
+        return _remainedBlueprintIndexes;
     }
 
     /**
@@ -302,8 +340,6 @@ contract PlayDuzzle is AccessControl {
         // 유저가 가지고 있는 blueprintItem token id 가.
         // zoneStart ~ zoneEnd 안에 있는지 (?)
         // 아아 아니면 zoneStart~zoneEnd 까지 의 설계도면 주에 하나를 유저가 가지고 있는지!! 글고 그중하나 민트.
-        // 근데 blueprint token id 가 .. 딱 zoneStart~ zoneEnd는 아니자나..
-        // 시즌마다 증가... ?흠..
         uint[] memory bluprintsOfUser = blueprintItemToken.tokensOfOwner(
             msg.sender
         );
@@ -334,70 +370,94 @@ contract PlayDuzzle is AccessControl {
         seasons[thisSeasonId].mintedCount++;
     }
 
-    // function getAllSeasonIds()
-    //     public
-    //     view
-    //     onlyRole(DEFAULT_ADMIN_ROLE)
-    //     returns (uint8[] memory _seasonIds)
-    // {
-    //     return (seasonIds);
-    // }
+    function getAllSeasonIds()
+        public
+        view
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        returns (uint8[] memory _seasonIds)
+    {
+        return (seasonIds);
+    }
 
-    // function getSeasonDataById(
-    //     uint8 id
-    // )
-    //     public
-    //     view
-    //     onlyRole(DEFAULT_ADMIN_ROLE)
-    //     returns (
-    //         uint24 totalPieceCount,
-    //         uint24 mintedCount,
-    //         MaterialItem[] memory materialItemTokens,
-    //         uint16[] memory itemMaxSupplys,
-    //         uint16[] memory itemMinted,
-    //         uint8[20] memory pieceCountOfZones
-    //     )
-    // // address[][] memory requiredItemsForMinting,
-    // // uint8[][] memory requiredItemAmount
-    // // uint startedAt,
-    // // bool[] memory mintedBlueprint
-    // {
-    //     require(id <= thisSeasonId, "season 404");
-    //     uint itemCount = seasons[id].materialItemTokens.length;
-    //     uint16[] memory _itemMaxSupplys = new uint16[](itemCount);
-    //     uint16[] memory _itemMinted = new uint16[](itemCount);
+    function getItemMintedCountsBySeasonId(
+        uint8 id
+    )
+        public
+        view
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        returns (
+            MaterialItem[] memory materialItemTokens,
+            uint16[] memory itemMaxSupplys,
+            uint16[] memory itemMinted,
+            bool[] memory mintedBlueprint
+        )
+    {
+        require(id <= thisSeasonId, "season 404");
+        uint itemCount = seasons[id].materialItemTokens.length;
+        uint16[] memory _itemMaxSupplys = new uint16[](itemCount);
+        uint16[] memory _itemMinted = new uint16[](itemCount);
 
-    //     for (uint8 i = 0; i < itemCount; i++) {
-    //         _itemMaxSupplys[i] = seasons[id].itemMaxSupplys[
-    //             address(seasons[id].materialItemTokens[i])
-    //         ];
-    //         _itemMinted[i] = seasons[id].itemMinted[
-    //             address(seasons[id].materialItemTokens[i])
-    //         ];
-    //     }
+        for (uint8 i = 0; i < itemCount; i++) {
+            _itemMaxSupplys[i] = seasons[id].itemMaxSupplys[
+                address(seasons[id].materialItemTokens[i])
+            ];
+            _itemMinted[i] = seasons[id].itemMinted[
+                address(seasons[id].materialItemTokens[i])
+            ];
+        }
 
-    //     address[][] memory _requiredItemsForMinting = new address[][](20);
-    //     uint8[][] memory _requiredItemAmount = new uint8[][](20);
+        return (
+            seasons[id].materialItemTokens,
+            _itemMaxSupplys,
+            _itemMinted,
+            seasons[id].mintedBlueprint
+        );
+    }
 
-    //     for (uint8 i = 0; i < 20; i++) {
-    //         _requiredItemsForMinting[i] = seasons[id].requiredItemsForMinting[
-    //             i
-    //         ];
+    function getPuzzlePieceMintedCountsBySeasonId(
+        uint8 id
+    )
+        public
+        view
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        returns (uint24 totalPieceCount, uint24 mintedCount)
+    {
+        require(id <= thisSeasonId, "season 404");
 
-    //         _requiredItemAmount[i] = seasons[id].requiredItemAmount[i];
-    //     }
+        return (seasons[id].totalPieceCount, seasons[id].mintedCount);
+    }
 
-    //     return (
-    //         seasons[id].totalPieceCount,
-    //         seasons[id].mintedCount,
-    //         seasons[id].materialItemTokens,
-    //         _itemMaxSupplys,
-    //         _itemMinted,
-    //         seasons[id].pieceCountOfZones
-    //         // _requiredItemsForMinting,
-    //         // _requiredItemAmount
-    //         // seasons[id].startedAt,
-    //         // seasons[id].mintedBlueprint
-    //     );
-    // }
+    function getDataBySeasonId(
+        uint8 id
+    )
+        public
+        view
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        returns (
+            uint8[20] memory pieceCountOfZones,
+            address[][] memory requiredItemsForMinting,
+            uint8[][] memory requiredItemAmount,
+            uint startedAt
+        )
+    {
+        require(id <= thisSeasonId, "season 404");
+
+        address[][] memory _requiredItemsForMinting = new address[][](20);
+        uint8[][] memory _requiredItemAmount = new uint8[][](20);
+
+        for (uint8 i = 0; i < 20; i++) {
+            _requiredItemsForMinting[i] = seasons[id].requiredItemsForMinting[
+                i
+            ];
+
+            _requiredItemAmount[i] = seasons[id].requiredItemAmount[i];
+        }
+
+        return (
+            seasons[id].pieceCountOfZones,
+            _requiredItemsForMinting,
+            _requiredItemAmount,
+            seasons[id].startedAt
+        );
+    }
 }

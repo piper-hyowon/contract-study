@@ -11,9 +11,9 @@ export type PlayDuzzleDeployParameters = [number, string, string];
  */
 export class PlayDuzzleContractData {
   // PlayDuzzle contract 생성자 파라미터
-  public deployParameters!: PlayDuzzleDeployParameters;
-  public playDuzzleInstance!: PlayDuzzle;
-  public dalInstance!: Dal;
+  public deployParameters: PlayDuzzleDeployParameters;
+  public playDuzzleInstance: PlayDuzzle | undefined;
+  public dalInstance: Dal | undefined;
   public bluepirntInstance: BlueprintItem | undefined;
   public puzzlePieceInstance: PuzzlePiece | undefined;
 
