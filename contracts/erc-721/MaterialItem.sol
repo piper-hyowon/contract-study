@@ -29,6 +29,7 @@ contract MaterialItem is
         address admin
     ) ERC721(name_, symbol_) {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(DEFAULT_ADMIN_ROLE, serviceContract);
         _grantRole(MINTER_ROLE, serviceContract);
 
         setBaseURI(metadataUri);

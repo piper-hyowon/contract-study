@@ -25,6 +25,7 @@ contract BlueprintItem is
         address admin
     ) ERC721("Blueprint Item", "BP") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(DEFAULT_ADMIN_ROLE, serviceContract);
         _grantRole(MINTER_ROLE, serviceContract);
 
         setBaseURI(metadataUri);

@@ -18,6 +18,7 @@ describe("PuzzlePiece", function () {
     const dalContract = await ethers.getContractFactory("PuzzlePiece");
     puzzlePieceInstance = (await dalContract.deploy(
       tokenCollectionBaseUri,
+      owner.address,
       owner.address
     )) as unknown as PuzzlePiece;
   });
@@ -63,7 +64,9 @@ describe("PuzzlePiece", function () {
 
       const [, tokenId3] = (
         (
-          await (await puzzlePieceInstance.mint(addr1.address, BigInt(2))).wait()
+          await (
+            await puzzlePieceInstance.mint(addr1.address, BigInt(2))
+          ).wait()
         )?.logs.find((e) => e.topics[0] === EventTopic.Mint) as EventLog
       ).args;
       expect(await puzzlePieceInstance.ownerOf(tokenId3)).to.equal(addr1);

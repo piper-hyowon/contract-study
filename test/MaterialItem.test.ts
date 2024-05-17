@@ -29,6 +29,7 @@ describe("MaterialItems", function () {
       tokenCollectionName1,
       tokenCollectionSymbol1,
       tokenCollectionBaseUri1,
+      owner.address,
       owner.address
     )) as unknown as MaterialItem;
 
@@ -36,6 +37,7 @@ describe("MaterialItems", function () {
       tokenCollectionName2,
       tokenCollectionSymbol2,
       tokenCollectionBaseUri2,
+      owner.address,
       owner.address
     )) as unknown as MaterialItem;
   });
