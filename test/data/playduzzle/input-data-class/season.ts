@@ -1,3 +1,4 @@
+import { MaterialItem } from "../../../../typechain-types/contracts/erc-721/MaterialItem";
 import { DefaultDuzzleData } from "./constants";
 
 export type StartSeasonParameters = [
@@ -24,12 +25,13 @@ export interface SeasonDataInit {
 }
 
 export class SeasonData {
-  public initData!: SeasonDataInit;
-  public materialItemTokens!: string[];
+  public initData: SeasonDataInit;
+  public materialItemTokens: string[] = []; // addresses
+  public materialItemInstances: MaterialItem[] = [];
 
-  public startSeasonParameters!: StartSeasonParameters;
-  public requiredMaterialTokensForMinting!: string[][];
-  public setZoneDataParametersArr!: SetZoneDataParameters[]; // arr.length = zone 수만큼
+  public startSeasonParameters: StartSeasonParameters;
+  public requiredMaterialTokensForMinting: string[][] | undefined;
+  public setZoneDataParametersArr: SetZoneDataParameters[] | undefined; // arr.length = zone 수만큼
 
   constructor(initData: SeasonDataInit) {
     const {
@@ -56,7 +58,7 @@ export class SeasonData {
     ) {
       throw new Error("Invalid Season Data Input");
     }
- 
+
     this.initData = initData;
 
     const totalPieceCount: number = pieceCountOfZones.reduce(function (a, b) {
@@ -79,9 +81,10 @@ export class SeasonData {
       this.initData;
 
     this.materialItemTokens = materialItemTokenAddresses;
+    // console.log("make zone paraeters 로 넘어가는: ", materialItemTokenAddresses);
     this.requiredMaterialTokensForMinting =
       requiredMaterialIndexesForMinting.map((materialIndexes: number[]) =>
-        materialIndexes.map((i) => this.materialItemTokens[i])
+        materialIndexes.map((i) => this.materialItemTokens![i])
       );
 
     this.setZoneDataParametersArr = new Array(DefaultDuzzleData.ZoneCount)
@@ -89,7 +92,7 @@ export class SeasonData {
       .map((_, zone) => [
         zone,
         this.initData.pieceCountOfZones[zone],
-        this.requiredMaterialTokensForMinting[zone],
+        this.requiredMaterialTokensForMinting![zone],
         requiredMaterialAmounts[zone],
       ]);
   }

@@ -126,7 +126,7 @@ describe("PlayDuzzle Initialization / Start New Season", function () {
         .fill(null)
         .map((_e, i) =>
           _.playDuzzleInstance!.setZoneData(
-            ...firstSeasonData.setZoneDataParametersArr[i]
+            ...firstSeasonData.setZoneDataParametersArr![i]
           )
         );
       const result = await Promise.allSettled(setZoneDatas);
@@ -136,7 +136,7 @@ describe("PlayDuzzle Initialization / Start New Season", function () {
       for (let zone: number = 0; zone < DefaultDuzzleData.ZoneCount; zone++) {
         let contractResponse: ContractTransactionResponse =
           await _.playDuzzleInstance!.setZoneData(
-            ...firstSeasonData.setZoneDataParametersArr[zone]
+            ...firstSeasonData.setZoneDataParametersArr![zone]
           );
         const args = (
           (await contractResponse.wait())?.logs.find(
@@ -147,7 +147,7 @@ describe("PlayDuzzle Initialization / Start New Season", function () {
         expect(firstSeasonData.initData.pieceCountOfZones[zone]).to.equal(
           args.getValue("pieceCountOfZones")
         );
-        expect(firstSeasonData.requiredMaterialTokensForMinting[zone]).to.eql(
+        expect(firstSeasonData.requiredMaterialTokensForMinting![zone]).to.eql(
           args.getValue("requiredItemsForMinting")
         );
         expect(
@@ -217,7 +217,7 @@ describe("PlayDuzzle Initialization / Start New Season", function () {
         .fill(null)
         .map((_e, i) =>
           _.playDuzzleInstance!.setZoneData(
-            ...secondSeasonData.setZoneDataParametersArr[i]
+            ...secondSeasonData.setZoneDataParametersArr![i]
           )
         );
       const result = await Promise.allSettled(setZoneDatas);
@@ -227,7 +227,7 @@ describe("PlayDuzzle Initialization / Start New Season", function () {
       for (let zone: number = 0; zone < DefaultDuzzleData.ZoneCount; zone++) {
         let contractResponse: ContractTransactionResponse =
           await _.playDuzzleInstance!.setZoneData(
-            ...secondSeasonData.setZoneDataParametersArr[zone]
+            ...secondSeasonData.setZoneDataParametersArr![zone]
           );
         const args = (
           (await contractResponse.wait())?.logs.find(
@@ -238,7 +238,7 @@ describe("PlayDuzzle Initialization / Start New Season", function () {
         expect(secondSeasonData.initData.pieceCountOfZones[zone]).to.equal(
           args.getValue("pieceCountOfZones")
         );
-        expect(secondSeasonData.requiredMaterialTokensForMinting[zone]).to.eql(
+        expect(secondSeasonData.requiredMaterialTokensForMinting![zone]).to.eql(
           args.getValue("requiredItemsForMinting")
         );
         expect(
