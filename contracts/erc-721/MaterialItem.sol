@@ -25,22 +25,27 @@ contract MaterialItem is
         string memory name_,
         string memory symbol_,
         string memory metadataUri,
-        address minter
+        address serviceContract, // play duzzle contract
+        address admin
     ) ERC721(name_, symbol_) {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MINTER_ROLE, minter);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(MINTER_ROLE, serviceContract);
 
         setBaseURI(metadataUri);
     }
 
     function getBaseURI() public view returns (string memory) {
-        return baseURI;
+        return _baseURI();
     }
 
     function setBaseURI(
-        string memory _baseURI
+        string memory baseURI_
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        baseURI = _baseURI;
+        baseURI = baseURI_;
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
     }
 
     function mint(address _to) external onlyRole(MINTER_ROLE) returns (uint) {

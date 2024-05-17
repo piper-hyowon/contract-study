@@ -14,32 +14,35 @@ contract PuzzlePiece is AccessControl, ERC721, ERC721URIStorage {
     event Burn(address from, uint tokenId);
 
     constructor(
-        string memory baseURI_,
-        address minter
+        string memory metadataUri,
+        address serviceContract, // play duzzle contract
+        address admin
     ) ERC721("Duzzle Puzzle Pieces", "DZPZ") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(MINTER_ROLE, minter);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(MINTER_ROLE, serviceContract);
 
-        setBaseURI(baseURI_);
+        setBaseURI(metadataUri);
     }
 
     function getBaseURI() public view returns (string memory) {
-        return baseURI;
+        return _baseURI();
     }
 
     function setBaseURI(
-        string memory _baseURI
+        string memory baseURI_
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        baseURI = _baseURI;
+        baseURI = baseURI_;
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
     }
 
     function mint(
         address _to,
-        // string memory _tokenURI,
         uint tokenId
     ) external onlyRole(MINTER_ROLE) returns (uint) {
         _mint(_to, tokenId);
-        // _setTokenURI(tokenId, _tokenURI);
 
         emit Mint(_to, tokenId);
 
