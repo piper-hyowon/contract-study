@@ -199,7 +199,7 @@ describe("PlayDuzzle", function () {
       // AssertionError: Expected transaction to be reverted with reason 'item nft sold out', but it didn't revert
       await expect(
         _.playDuzzleInstance!.connect(addr1).getRandomItem()
-      ).to.be.revertedWith("item nft sold out");
+      ).to.be.revertedWithCustomError(_.playDuzzleInstance!, "SoldOutItems");
     });
   });
 
@@ -403,15 +403,24 @@ describe("PlayDuzzle", function () {
     it("if season id does not existed, revert with 'season 404'", async function () {
       await expect(
         _.playDuzzleInstance!.getItemMintedCountsBySeasonId(10)
-      ).to.be.revertedWith("season 404");
+      ).to.be.revertedWithCustomError(
+        _.playDuzzleInstance!,
+        "SeasonIdNotFound"
+      );
 
       await expect(
         _.playDuzzleInstance!.getPuzzlePieceMintedCountsBySeasonId(10)
-      ).to.be.revertedWith("season 404");
+      ).to.be.revertedWithCustomError(
+        _.playDuzzleInstance!,
+        "SeasonIdNotFound"
+      );
 
       await expect(
         _.playDuzzleInstance!.getDataBySeasonId(10)
-      ).to.be.revertedWith("season 404");
+      ).to.be.revertedWithCustomError(
+        _.playDuzzleInstance!,
+        "SeasonIdNotFound"
+      );
     });
   });
 });

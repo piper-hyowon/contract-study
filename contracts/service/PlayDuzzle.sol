@@ -33,6 +33,11 @@ contract PlayDuzzle is AccessControl {
     );
     event UnlockPuzzlePiece(uint8 zoneId, uint tokenId, address to);
 
+    error NotEnoughBalanceOfBlueprintItem();
+    error NotEnoughBalanceOfMaterialItem();
+    error SeasonIdNotFound();
+    error SoldOutItems();
+
     constructor(
         uint capOfDalToken,
         string memory bluePrintBaseUri,
@@ -193,7 +198,7 @@ contract PlayDuzzle is AccessControl {
 
                 if (mintableCount < 1) {
                     // 설계도면도 없을 경우
-                    revert("item nft sold out");
+                    revert SoldOutItems();
                 } else {
                     uint256 bluePrintItemIndex = Utils.getRandomNumber(
                         0,
@@ -256,7 +261,7 @@ contract PlayDuzzle is AccessControl {
                         1;
                 } else {
                     // 재료도 없을 경우
-                    revert("item nft sold out");
+                    revert SoldOutItems();
                 }
             }
         }
@@ -359,10 +364,10 @@ contract PlayDuzzle is AccessControl {
             ];
             uint[] memory tokens = instance.tokensOfOwner(msg.sender);
 
-            require(
-                tokens.length >= itemAmount,
-                "not enough balacnce(material)"
-            );
+            if (tokens.length < itemAmount) {
+                revert NotEnoughBalanceOfMaterialItem();
+            }
+
             for (uint j = 0; j < itemAmount; j++) {
                 instance.burn(msg.sender, tokens[j]);
             }
@@ -387,8 +392,9 @@ contract PlayDuzzle is AccessControl {
                 i = i + bluprintsOfUser.length; // if 문 종료
             }
         }
-
-        require(hasBlueprint, "not enough balance(blueprint)");
+        if (!hasBlueprint) {
+            revert NotEnoughBalanceOfBlueprintItem();
+        }
         blueprintItemToken.burn(msg.sender, blueprintId);
 
         // tokenId 얻기
@@ -419,7 +425,9 @@ contract PlayDuzzle is AccessControl {
             bool[] memory mintedBlueprint
         )
     {
-        require(id <= thisSeasonId, "season 404");
+        if (id > thisSeasonId) {
+            revert SeasonIdNotFound();
+        }
         uint itemCount = seasons[id].materialItemTokens.length;
         uint16[] memory _itemMaxSupplys = new uint16[](itemCount);
         uint16[] memory _itemMinted = new uint16[](itemCount);
@@ -449,7 +457,9 @@ contract PlayDuzzle is AccessControl {
         onlyRole(DEFAULT_ADMIN_ROLE)
         returns (uint24 totalPieceCount, uint24 mintedCount)
     {
-        require(id <= thisSeasonId, "season 404");
+        if (id > thisSeasonId) {
+            revert SeasonIdNotFound();
+        }
 
         return (seasons[id].totalPieceCount, seasons[id].mintedCount);
     }
@@ -467,7 +477,9 @@ contract PlayDuzzle is AccessControl {
             uint startedAt
         )
     {
-        require(id <= thisSeasonId, "season 404");
+        if (id > thisSeasonId) {
+            revert SeasonIdNotFound();
+        }
 
         address[][] memory _requiredItemsForMinting = new address[][](20);
         uint8[][] memory _requiredItemAmount = new uint8[][](20);
