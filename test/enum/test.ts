@@ -6,3 +6,5 @@ export enum EventTopic {
   SetZoneData = "0x103f24af39c7e7c12ee21ffed71c10dc9dba631749ee10f3a1a08470f3ff91e7",
   GetRandomItem = "0x34009a12cdecbe310c9e38f088c4c86f14eff51a1981813090ff386ffa04960f",
 }
+
+export const ItemPrice = 2; // DAL

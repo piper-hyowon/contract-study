@@ -2,7 +2,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { EventLog } from "ethers";
 import { ethers } from "hardhat";
-import { EventTopic } from "./enum/test";
+import { EventTopic, ItemPrice } from "./enum/test";
 import { Dal } from "../typechain-types/contracts/erc-20/Dal";
 import { abi as DalAbi } from "../artifacts/contracts/erc-20/Dal.sol/Dal.json";
 import { PlayDuzzle } from "../typechain-types/contracts/service/PlayDuzzle";
@@ -98,14 +98,17 @@ describe("PlayDuzzle", function () {
   });
 
   describe("Get A Random Item NFT", function () {
-    it("To get a random item NFT, need 2 DAL tokens.", async function () {
+    it(`To get a random item NFT, need ${ItemPrice} DAL tokens.`, async function () {
       await expect(
         _.playDuzzleInstance!.connect(addr1).getRandomItem()
       ).to.be.rejectedWith("ERC20InsufficientBalance");
     });
 
     it("Emits a Mint event for newly minted random item nft", async function () {
-      await _.dalInstance!.mint(addr1.address, 2);
+      await _.dalInstance!.mint(
+        addr1.address,
+        ethers.parseEther(String(ItemPrice))
+      );
       const txResponse = await _.playDuzzleInstance!.connect(
         addr1
       ).getRandomItem();
@@ -114,8 +117,12 @@ describe("PlayDuzzle", function () {
         .true;
     });
 
-    it("get random item nft by 2 DAL", async function () {
-      await _.dalInstance!.mint(addr1.address, 4);
+    it(`get random item nft by ${ItemPrice} DAL`, async function () {
+      await _.dalInstance!.mint(
+        addr1.address,
+        ethers.parseEther(String(ItemPrice * 2))
+      );
+
       const dalBalance = await _.dalInstance!.balanceOf(addr1.address);
 
       // 재료 아이템 발행
@@ -130,7 +137,9 @@ describe("PlayDuzzle", function () {
 
       // 2DAL 차감 확인
       const finalDalBalance = await _.dalInstance!.balanceOf(addr1.address);
-      expect(dalBalance - BigInt(2)).to.equal(finalDalBalance);
+      expect(dalBalance - ethers.parseEther(String(ItemPrice))).to.equal(
+        finalDalBalance
+      );
 
       // 발행된 NFT의 토큰 주소가 (재료 , 설계도면) 중에 하나인지 확인
       const tokenAddress = mintEvent?.address;
@@ -189,7 +198,10 @@ describe("PlayDuzzle", function () {
       const totalItemMaxSupplys =
         materialTotalMaxSupplys + blueprintsTotalCount;
 
-      await _.dalInstance!.mint(addr1, (totalItemMaxSupplys + 1) * 2);
+      await _.dalInstance!.mint(
+        addr1,
+        ethers.parseEther(String((totalItemMaxSupplys + 1) * ItemPrice))
+      );
 
       for (let i: number = 0; i < totalItemMaxSupplys; i++) {
         await _.playDuzzleInstance!.connect(addr1).getRandomItem();
@@ -218,7 +230,10 @@ describe("PlayDuzzle", function () {
       const totalItemMaxSupplys =
         materialTotalMaxSupplys + blueprintsTotalCount;
 
-      await _.dalInstance!.mint(addr1, totalItemMaxSupplys * 2);
+      await _.dalInstance!.mint(
+        addr1,
+        ethers.parseEther(String(totalItemMaxSupplys * ItemPrice))
+      );
       let mintedItems: {
         tokenAddress: string;
         tokenIds: string[];
@@ -267,9 +282,9 @@ describe("PlayDuzzle", function () {
           }
         }
       }
-      console.log("얻은 재료들", mintedItems);
+      // console.log("얻은 재료들", mintedItems);
 
-      console.log("유저 보유 아이템 - before");
+      // console.log("유저 보유 아이템 - before");
       for (
         let i: number = 0;
         i < firstSeasonData.materialItemInstances!.length;
@@ -278,20 +293,20 @@ describe("PlayDuzzle", function () {
         let balance = await firstSeasonData.materialItemInstances![i].balanceOf(
           addr1.address
         );
-        console.log(`${firstSeasonData.materialItemTokens[i]}: ${balance}개`);
+        // console.log(`${firstSeasonData.materialItemTokens[i]}: ${balance}개`);
       }
-      console.log(
-        `blueprint nfts: ${await _.bluepirntInstance!.balanceOf(
-          addr1.address
-        )}개
-        `
-      );
+      // console.log(
+      //   `blueprint nfts: ${await _.bluepirntInstance!.balanceOf(
+      //     addr1.address
+      //   )}개
+      //   `
+      // );
 
       // pieceCountOfZones: [
       //   4, 5, 3, 7, 2, 10, 3, 7, 7, 9, 11, 3, 4, 4, 6, 12, 3, 8, 5, 2,
       // ], // zone 0: 0~3 (4 pieces), zone1: 4~8(5 pieces) ... zone 19:
       await _.playDuzzleInstance!.connect(addr1).unlockPuzzlePiece(3); // zone 0 -> 재료[0] 1개, 재료[1] 1개
-      console.log("유저 보유 아이템 - after");
+      // console.log("유저 보유 아이템 - after");
       for (
         let i: number = 0;
         i < firstSeasonData.materialItemInstances!.length;
@@ -300,11 +315,11 @@ describe("PlayDuzzle", function () {
         let balance = await firstSeasonData.materialItemInstances[i].balanceOf(
           addr1.address
         );
-        console.log(`${firstSeasonData.materialItemTokens[i]}: ${balance}개`);
+        // console.log(`${firstSeasonData.materialItemTokens[i]}: ${balance}개`);
       }
-      console.log(
-        `blueprint nfts: ${await _.bluepirntInstance!.balanceOf(addr1.address)}`
-      );
+      // console.log(
+      //   `blueprint nfts: ${await _.bluepirntInstance!.balanceOf(addr1.address)}`
+      // );
       await _.playDuzzleInstance!.connect(addr1).unlockPuzzlePiece(4); // zone 1 -> 재료[0] 2개
       await _.playDuzzleInstance!.connect(addr1).unlockPuzzlePiece(11); // zone 2 -> 재료[1] 2개
       await _.playDuzzleInstance!.connect(addr1).unlockPuzzlePiece(12); // zone 3 -> 재료[1] 1개
@@ -326,7 +341,7 @@ describe("PlayDuzzle", function () {
   describe("Get Season Data", function () {
     it("get all season ids", async function () {
       const seasonIds = await _.playDuzzleInstance!.getAllSeasonIds();
-      console.log("seasonIds: ", seasonIds);
+      // console.log("seasonIds: ", seasonIds);
     });
 
     it("get item minted counts by season id", async function () {
@@ -345,7 +360,11 @@ describe("PlayDuzzle", function () {
       );
 
       // DAL 발행 -> getRandomItem() 호출
-      await _.dalInstance?.mint(addr1.address, 2);
+
+      await _.dalInstance?.mint(
+        addr1.address,
+        ethers.parseEther(String(ItemPrice))
+      );
       const mintEvent = (
         await (
           await _.playDuzzleInstance!.connect(addr1).getRandomItem()
@@ -360,7 +379,7 @@ describe("PlayDuzzle", function () {
         const blueprintId =
           mintEvent?.index! - Number(await _.playDuzzleInstance?.offset());
 
-        // TODO: 2번 실패함
+        // TODO: 간헐적 실패
         expect(mintedBlueprintFinal[blueprintId]).to.be.true;
       } else {
         const materialItemIdx = materialItemTokens.findIndex(

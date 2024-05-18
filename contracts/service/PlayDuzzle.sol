@@ -152,7 +152,7 @@ contract PlayDuzzle is AccessControl {
 
     function getRandomItem() public {
         // 2 DAL 차감
-        dalToken.burn(msg.sender, 2);
+        dalToken.burn(msg.sender, 2 * (10 ** dalToken.decimals()));
 
         // 랜덤 아이템 뽑기
         // 1. 설계도면 vs 재료
