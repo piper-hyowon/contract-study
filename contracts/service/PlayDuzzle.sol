@@ -175,7 +175,7 @@ contract PlayDuzzle is AccessControl {
             if (availableMaterialIdxCount > 0) {
                 uint256 availableMaterialIndex = Utils.getRandomNumber(
                     0,
-                    availableMaterialItemIdxs.length
+                    availableMaterialIdxCount
                 );
                 MaterialItem instance = seasons[thisSeasonId]
                     .materialItemTokens[
@@ -200,16 +200,16 @@ contract PlayDuzzle is AccessControl {
                     // 설계도면도 없을 경우
                     revert SoldOutItems();
                 } else {
-                    uint256 bluePrintItemIndex = Utils.getRandomNumber(
+                    uint256 randomNumber = Utils.getRandomNumber(
                         0,
                         mintableCount
                     );
-                    uint256 blueprintTokenId = remainedBlueprintIndexes[
-                        bluePrintItemIndex
+                    uint256 blueprintIdx = remainedBlueprintIndexes[
+                        randomNumber
                     ];
-                    seasons[thisSeasonId].mintedBlueprint[
-                        blueprintTokenId
-                    ] = true;
+
+                    seasons[thisSeasonId].mintedBlueprint[blueprintIdx] = true;
+                    uint256 blueprintTokenId = blueprintIdx + 1;
                     blueprintItemToken.mint(
                         msg.sender,
                         blueprintTokenId + offset
@@ -227,15 +227,11 @@ contract PlayDuzzle is AccessControl {
             ) = getMintableBlueprintIds();
 
             if (mintableCount > 0) {
-                uint256 bluePrintItemIndex = Utils.getRandomNumber(
-                    0,
-                    mintableCount
-                );
-                uint256 blueprintTokenId = remainedBlueprintIndexes[
-                    bluePrintItemIndex
-                ];
+                uint256 randomNumber = Utils.getRandomNumber(0, mintableCount);
+                uint256 blueprintIdx = remainedBlueprintIndexes[randomNumber];
 
-                seasons[thisSeasonId].mintedBlueprint[blueprintTokenId] = true;
+                seasons[thisSeasonId].mintedBlueprint[blueprintIdx] = true;
+                uint256 blueprintTokenId = blueprintIdx + 1;
                 blueprintItemToken.mint(msg.sender, blueprintTokenId + offset);
             } else {
                 // 발행 가능한 설계도면 아이템 없을 경우 재료 발행
@@ -249,7 +245,7 @@ contract PlayDuzzle is AccessControl {
                 if (availableMaterialIdxCount > 0) {
                     uint256 availableMaterialIndex = Utils.getRandomNumber(
                         0,
-                        availableMaterialItemIdxs.length
+                        availableMaterialIdxCount
                     );
                     MaterialItem instance = seasons[thisSeasonId]
                         .materialItemTokens[
@@ -284,20 +280,16 @@ contract PlayDuzzle is AccessControl {
         );
         uint availableMaterialCount = 0;
 
-        for (
-            uint8 i = 0;
-            i < seasons[thisSeasonId].materialItemTokens.length;
-            i++
-        ) {
+        for (uint8 i = 0; i < materialItemCount; i++) {
+            uint minted = seasons[thisSeasonId].itemMinted[
+                address(seasons[thisSeasonId].materialItemTokens[i])
+            ];
+            uint maxSupplys = seasons[thisSeasonId].itemMaxSupplys[
+                address(seasons[thisSeasonId].materialItemTokens[i])
+            ];
+
             // 최대 발행량까지 아직이면
-            if (
-                seasons[thisSeasonId].itemMinted[
-                    address(seasons[thisSeasonId].materialItemTokens[i])
-                ] <
-                seasons[thisSeasonId].itemMaxSupplys[
-                    address(seasons[thisSeasonId].materialItemTokens[i])
-                ]
-            ) {
+            if (minted < maxSupplys) {
                 availableMaterialItemIdxs[availableMaterialCount] = i;
                 availableMaterialCount++;
             }
@@ -334,7 +326,7 @@ contract PlayDuzzle is AccessControl {
         // pieceId 가 해당하는 zone 파악
         // zone 별로 필요한 재료 아이템 다름
         uint8 zoneId = 0;
-        uint24 zoneStart = 0;
+        uint24 zoneStart = 1;
         uint24 zoneEnd = 0;
         while (true) {
             zoneEnd = zoneEnd + seasons[thisSeasonId].pieceCountOfZones[zoneId];

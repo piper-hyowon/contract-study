@@ -33,6 +33,7 @@ contract MaterialItem is
         _grantRole(MINTER_ROLE, serviceContract);
 
         setBaseURI(metadataUri);
+        nextTokenId = 1;
     }
 
     function getBaseURI() public view returns (string memory) {
